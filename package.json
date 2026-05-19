@@ -1,0 +1,8 @@
+{
+  "name": "botforge",
+  "version": "1.0.0",
+  "main": "server_live_ready.js",
+  "scripts": {
+    "start": "node server_live_ready.js"
+  }
+}

@@ -1,0 +1,26 @@
+# Deploying BotForge on Render
+
+1. Upload these files to a GitHub repository:
+   - chatbot_live_ready.html
+   - server_live_ready.js
+   - package.json
+
+2. Go to https://render.com
+
+3. Create a new Web Service
+
+4. Connect your GitHub repository
+
+5. Use:
+   Build Command:
+   npm install
+
+   Start Command:
+   node server_live_ready.js
+
+6. Add Environment Variable:
+   GROQ_API_KEY=your_groq_api_key
+
+7. Deploy
+
+Your chatbot will go live with a public URL.

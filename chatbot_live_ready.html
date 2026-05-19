@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BotForge — Niche AI Chatbot</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #7c6dfa;
+    --accent2: #fa6d8a;
+    --accent3: #6dfabc;
+    --text: #f0f0f8;
+    --muted: #6b6b88;
+    --success: #6dfabc;
+    --warning: #fac86d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* NAV */
+  .topnav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; height: 52px; flex-shrink: 0; }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; margin-right: 32px; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  .nav-tabs { display: flex; height: 100%; }
+  .nav-tab { padding: 0 18px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 6px; border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .btn { padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-ghost:hover { background: var(--surface2); }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { opacity: 0.85; }
+  .status-pill { display: flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-family: 'DM Mono', monospace; cursor: pointer; border: 1px solid; transition: all 0.2s; }
+  .status-pill.connected { background: rgba(109,250,188,0.1); color: var(--success); border-color: rgba(109,250,188,0.3); }
+  .status-pill.disconnected { background: rgba(250,200,109,0.1); color: var(--warning); border-color: rgba(250,200,109,0.3); }
+  .live-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* LAYOUT */
+  .main { flex: 1; display: flex; overflow: hidden; }
+  .page { display: none; }
+  .page.active { display: flex; flex: 1; overflow: hidden; }
+
+  /* CHAT PAGE */
+  .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; max-width: 700px; width: 100%; margin: 0 auto; padding: 0 24px; }
+  .bot-info-bar { padding: 16px 0 12px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .bot-avatar { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; background: linear-gradient(135deg, var(--accent), var(--accent2)); flex-shrink: 0; transition: background 0.3s; }
+  .bot-info-text .bot-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+  .bot-info-text .bot-sub { font-size: 12px; color: var(--muted); }
+  .messages-container { flex: 1; overflow-y: auto; padding: 20px 0; display: flex; flex-direction: column; gap: 16px; }
+  .msg-row { display: flex; align-items: flex-end; gap: 10px; }
+  .msg-row.user { flex-direction: row-reverse; }
+  .msg-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  .msg-avatar.bot-av { background: linear-gradient(135deg, var(--accent), var(--accent2)); transition: background 0.3s; }
+  .msg-bubble { max-width: 75%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.55; animation: msgIn 0.25s ease; }
+  @keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .msg-bubble.bot { background: var(--surface2); color: var(--text); border-bottom-left-radius: 4px; }
+  .msg-bubble.user { background: var(--accent); color: white; border-bottom-right-radius: 4px; transition: background 0.3s; }
+  .msg-time { font-size: 10px; color: var(--muted); margin-top: 4px; padding: 0 4px; font-family: 'DM Mono', monospace; }
+  .msg-col { display: flex; flex-direction: column; }
+  .msg-row.user .msg-col { align-items: flex-end; }
+  .typing-row { display: flex; align-items: flex-end; gap: 10px; }
+  .typing-bubble { background: var(--surface2); border-radius: 18px; border-bottom-left-radius: 4px; padding: 14px 18px; display: flex; gap: 5px; align-items: center; }
+  .t-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: bounce 1.2s infinite; }
+  .t-dot:nth-child(2) { animation-delay: 0.2s; }
+  .t-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-7px); } }
+  .input-area { padding: 16px 0 20px; flex-shrink: 0; border-top: 1px solid var(--border); }
+  .quick-prompts { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .quick-btn { padding: 6px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; color: var(--text); font-size: 12px; cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+  .quick-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .input-box { display: flex; align-items: flex-end; gap: 10px; background: var(--surface2); border: 2px solid var(--border); border-radius: 14px; padding: 10px 10px 10px 16px; transition: border-color 0.2s; }
+  .input-box:focus-within { border-color: var(--accent); }
+  #userInput { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif; resize: none; max-height: 120px; line-height: 1.5; min-height: 24px; }
+  #userInput::placeholder { color: var(--muted); }
+  .send-btn { width: 40px; height: 40px; border-radius: 10px; background: var(--accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; flex-shrink: 0; transition: all 0.15s; }
+  .send-btn:hover { opacity: 0.85; transform: scale(1.05); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .input-hint { font-size: 11px; color: var(--muted); margin-top: 8px; text-align: center; font-family: 'DM Mono', monospace; }
+
+  /* SETTINGS PANELS */
+  .settings-panel { width: 100%; max-width: 600px; border-right: none; display: flex; flex-direction: column; overflow: hidden; }
+  .panel-header { padding: 16px 20px; border-bottom: 1px solid var(--border); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; background: var(--surface); flex-shrink: 0; }
+  .settings-scroll { overflow-y: auto; flex: 1; padding: 20px; }
+  .form-group { margin-bottom: 18px; }
+  .form-label { display: block; font-size: 11px; font-weight: 500; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.8px; font-family: 'DM Mono', monospace; }
+  .form-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.15s; }
+  .form-input:focus { border-color: var(--accent); }
+  textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.6; }
+  select.form-input { cursor: pointer; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .section-divider { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: var(--muted); margin: 20px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
+  .color-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .color-swatch { width: 30px; height: 30px; border-radius: 7px; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s; }
+  .color-swatch:hover { transform: scale(1.15); }
+  .color-swatch.selected { border-color: white; box-shadow: 0 0 0 1px rgba(255,255,255,0.3); }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .toggle-title { font-size: 13px; font-weight: 500; }
+  .toggle-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .toggle { width: 40px; height: 22px; background: var(--border); border-radius: 11px; position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+  .toggle.on { background: var(--accent); }
+  .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: transform 0.2s; }
+  .toggle.on::after { transform: translateX(18px); }
+  .kb-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .kb-status { margin-left: auto; font-size: 11px; color: var(--success); font-family: 'DM Mono', monospace; background: rgba(109,250,188,0.1); padding: 2px 8px; border-radius: 10px; }
+  .upload-zone { border: 2px dashed var(--border); border-radius: 10px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.15s; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
+  .upload-zone:hover { border-color: var(--accent); background: rgba(124,109,250,0.04); color: var(--text); }
+  .embed-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .embed-box pre { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--accent3); white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
+  .info-box { border-radius: 10px; padding: 16px; margin-bottom: 20px; font-size: 13px; line-height: 1.7; }
+  .info-box.green { background: rgba(109,250,188,0.08); border: 1px solid rgba(109,250,188,0.25); }
+  .info-box.purple { background: rgba(124,109,250,0.08); border: 1px solid rgba(124,109,250,0.25); }
+  .code-inline { background: var(--surface); padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 12px; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--surface2); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 18px; font-size: 13px; z-index: 999; opacity: 0; transition: all 0.3s; white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<div class="topnav">
+  <div class="logo">Bot<span>Forge</span></div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="setPage('test',this)">&#x1F4AC; Test Chatbot</div>
+    <div class="nav-tab" onclick="setPage('identity',this)">&#x1F3AD; Identity</div>
+    <div class="nav-tab" onclick="setPage('knowledge',this)">&#x1F4DA; Knowledge Base</div>
+    <div class="nav-tab" onclick="setPage('behavior',this)">&#x1F9E0; Behavior</div>
+    <div class="nav-tab" onclick="setPage('embed',this)">&#x1F517; Embed</div>
+    <div class="nav-tab" onclick="setPage('settings',this)">&#x2699;&#xFE0F; Settings</div>
+  </div>
+  <div class="nav-right">
+    <div id="statusPill" class="status-pill disconnected" onclick="setPage('settings', document.querySelector('.nav-tab:last-child'))">
+      <div class="live-dot"></div>
+      <span id="statusText">Add API Key</span>
+    </div>
+    <button class="btn btn-ghost" onclick="resetChat()">&#x1F504; Reset Chat</button>
+    <button class="btn btn-primary" onclick="showToast('Changes saved!')">Save</button>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- PAGE: TEST CHATBOT -->
+<div class="page active" id="page-test" style="flex-direction:column; background:var(--bg);">
+  <div class="chat-area">
+    <div class="bot-info-bar">
+      <div class="bot-avatar" id="botAvatar">&#x1F916;</div>
+      <div class="bot-info-text">
+        <div class="bot-name" id="botDisplayName">LexBot</div>
+        <div class="bot-sub" id="botDisplaySub">Law Firm Assistant - Powered by BotForge</div>
+      </div>
+    </div>
+    <div class="messages-container" id="messages">
+      <div class="msg-row">
+        <div class="msg-avatar bot-av">&#x1F916;</div>
+        <div class="msg-col">
+          <div class="msg-bubble bot" id="welcomeBubble">Hello! I'm LexBot, your legal assistant. I can help answer questions about our practice areas, fees, and scheduling consultations. How can I help you today?</div>
+          <div class="msg-time">Just now</div>
+        </div>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="quick-prompts" id="quickPrompts">
+        <span style="font-size:12px;color:var(--muted);align-self:center;margin-right:4px">Try:</span>
+        <button class="quick-btn" onclick="sendQuick(this)">What are your practice areas?</button>
+        <button class="quick-btn" onclick="sendQuick(this)">How do I book a consultation?</button>
+        <button class="quick-btn" onclick="sendQuick(this)">What are your fees?</button>
+        <button class="quick-btn" onclick="sendQuick(this)">Do you offer free consultations?</button>
+      </div>
+      <div class="input-box">
+        <textarea id="userInput" placeholder="Ask me anything..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">&#x27A4;</button>
+      </div>
+      <div class="input-hint">Enter to send &nbsp;·&nbsp; Shift+Enter for new line</div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: IDENTITY -->
+<div class="page" id="page-identity">
+  <div class="settings-panel">
+    <div class="panel-header">&#x1F3AD; Bot Identity</div>
+    <div class="settings-scroll">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Bot Name</label>
+          <input class="form-input" id="botNameInput" value="LexBot" oninput="applyIdentity()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Industry / Niche</label>
+          <select class="form-input" id="industryInput" onchange="applyIdentity()">
+            <option value="Law Firm">&#x2696;&#xFE0F; Law Firm</option>
+            <option value="Healthcare">&#x1F3E5; Healthcare</option>
+            <option value="Real Estate">&#x1F3E0; Real Estate</option>
+            <option value="Financial Services">&#x1F4B0; Financial Services</option>
+            <option value="Dental Practice">&#x1F9B7; Dental Practice</option>
+            <option value="E-commerce">&#x1F6D2; E-commerce</option>
+            <option value="SaaS / Tech">&#x1F4BB; SaaS / Tech</option>
+            <option value="Education">&#x1F4D6; Education</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Personality / Tone</label>
+        <select class="form-input">
+          <option>Professional &amp; Formal</option>
+          <option>Friendly &amp; Approachable</option>
+          <option>Concise &amp; Efficient</option>
+          <option>Empathetic &amp; Warm</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Welcome Message</label>
+        <textarea class="form-input" id="welcomeInput" oninput="applyIdentity()">Hello! I'm LexBot, your legal assistant. I can help answer questions about our practice areas, fees, and scheduling consultations. How can I help you today?</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">System Instructions (shapes AI behavior)</label>
+        <textarea class="form-input" id="systemInstructions" style="min-height:120px">You are LexBot, a professional AI assistant for a law firm. Help clients understand services, answer general legal questions, and schedule consultations. Never give specific legal advice — always recommend a consultation for detailed matters. Mention the free 30-minute consultation when discussing fees.</textarea>
+      </div>
+      <div class="section-divider">&#x1F3A8; Accent Color</div>
+      <div class="color-row" id="colorPicker">
+        <div class="color-swatch selected" style="background:#7c6dfa" onclick="applyColor('#7c6dfa',this)"></div>
+        <div class="color-swatch" style="background:#fa6d8a" onclick="applyColor('#fa6d8a',this)"></div>
+        <div class="color-swatch" style="background:#6dfabc" onclick="applyColor('#6dfabc',this)"></div>
+        <div class="color-swatch" style="background:#fa9c6d" onclick="applyColor('#fa9c6d',this)"></div>
+        <div class="color-swatch" style="background:#6daafa" onclick="applyColor('#6daafa',this)"></div>
+        <div class="color-swatch" style="background:#e63946" onclick="applyColor('#e63946',this)"></div>
+        <div class="color-swatch" style="background:#2d6a4f" onclick="applyColor('#2d6a4f',this)"></div>
+        <div class="color-swatch" style="background:#f4a261" onclick="applyColor('#f4a261',this)"></div>
+      </div>
+      <div style="margin-top:24px">
+        <button class="btn btn-primary" onclick="showToast('Identity saved! Switch to Test Chatbot to try it.')">Save Identity</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: KNOWLEDGE BASE -->
+<div class="page" id="page-knowledge">
+  <div class="settings-panel">
+    <div class="panel-header">&#x1F4DA; Knowledge Base</div>
+    <div class="settings-scroll">
+      <div class="upload-zone" onclick="simulateUpload()">
+        &#x1F4CE; &nbsp;<strong>Drop files here or click to upload</strong><br>
+        <span style="font-size:12px">PDF, DOCX, TXT, CSV</span>
+      </div>
+      <div id="kbItems">
+        <div class="kb-item">&#x1F4C4; <span style="flex:1">Practice Areas &amp; Services.pdf</span> <span class="kb-status">Trained</span></div>
+        <div class="kb-item">&#x1F4C4; <span style="flex:1">FAQ - Common Legal Questions.docx</span> <span class="kb-status">Trained</span></div>
+      </div>
+      <div class="section-divider">&#x1F310; Scrape a Website</div>
+      <div style="display:flex;gap:10px">
+        <input class="form-input" placeholder="https://yourwebsite.com" style="flex:1" id="scrapeUrl">
+        <button class="btn btn-primary" onclick="simulateScrape()">Scrape</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: BEHAVIOR -->
+<div class="page" id="page-behavior">
+  <div class="settings-panel">
+    <div class="panel-header">&#x1F9E0; Behavior Settings</div>
+    <div class="settings-scroll">
+      <div class="form-group">
+        <label class="form-label">Fallback Message</label>
+        <textarea class="form-input">I'm not sure I can help with that. Would you like me to connect you with one of our attorneys for a free consultation?</textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Max Response Length</label>
+          <select class="form-input">
+            <option>Short (1-2 sentences)</option>
+            <option selected>Medium (1 paragraph)</option>
+            <option>Long (detailed)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fallback Threshold %</label>
+          <input class="form-input" type="number" value="70">
+        </div>
+      </div>
+      <div class="section-divider">&#x1F514; CTA Triggers</div>
+      <div class="toggle-row">
+        <div><div class="toggle-title">Book Consultation Button</div><div class="toggle-desc">Show after 3 messages</div></div>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-title">Lead Capture (Email)</div><div class="toggle-desc">Ask before complex questions</div></div>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div style="margin-top:20px">
+        <button class="btn btn-primary" onclick="showToast('Behavior settings saved!')">Save Settings</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: EMBED -->
+<div class="page" id="page-embed">
+  <div class="settings-panel">
+    <div class="panel-header">&#x1F517; Embed Your Bot</div>
+    <div class="settings-scroll">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">Paste this before the closing body tag on your website.</p>
+      <div class="embed-box">
+        <pre id="embedSnippet">&lt;!-- BotForge Widget --&gt;
+&lt;script
+  src="https://cdn.botforge.ai/widget.js"
+  data-bot-id="bf_lex_a8f2k9"
+  data-color="#7c6dfa"
+  data-position="bottom-right"
+  async&gt;
+&lt;/script&gt;</pre>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn btn-primary" onclick="copyEmbed()">&#x1F4CB; Copy Code</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="settings-panel">
+    <div class="panel-header">&#x2699;&#xFE0F; API Settings</div>
+    <div class="settings-scroll">
+
+      <div class="info-box green">
+        <strong>&#x1F193; Groq — Free AI</strong><br>
+        Groq gives you free AI API access with no credit card needed. Get your key at <strong>console.groq.com</strong> in under 2 minutes. Your key is saved only in this browser.
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Groq API Key</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="form-input" id="apiKeyInput" type="password" placeholder="gsk_..." style="flex:1;font-family:'DM Mono',monospace;font-size:12px">
+          <button class="btn btn-primary" onclick="saveApiKey()" style="white-space:nowrap">Save Key</button>
+          <button class="btn btn-ghost" onclick="clearApiKey()" style="white-space:nowrap">Clear</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;font-family:'DM Mono',monospace">
+          Get your FREE key at <strong>console.groq.com</strong> — API Keys (no credit card)
+        </div>
+      </div>
+
+      <div class="section-divider">&#x1F9E9; Model</div>
+      <div class="form-group">
+        <label class="form-label">AI Model</label>
+        <select class="form-input" id="modelSelect">
+          <option value="llama-3.1-8b-instant" selected>Llama 3.1 8B — Fast &amp; free (recommended)</option>
+          <option value="llama-3.3-70b-versatile">Llama 3.3 70B — Smarter, still free</option>
+          <option value="moonshotai/moonlight-16a-a3b-instruct">Moonlight 16A — MoE model, free</option>
+          <option value="gemma2-9b-it">Gemma 2 9B — Google model, free</option>
+        </select>
+      </div>
+
+      <div class="section-divider">&#x1F9EA; Test Connection</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="testConnection()">&#x1F50C; Test Connection</button>
+        <div id="testResult" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--muted)"></div>
+      </div>
+
+      <div style="margin-top:28px;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:12px;color:var(--muted);line-height:1.9">
+        <strong style="color:var(--text)">How to run locally:</strong><br>
+        1. Go to <strong style="color:var(--text)">console.groq.com</strong>, sign up free, create an API key<br>
+        2. Put <span class="code-inline">server.js</span> and <span class="code-inline">chatbot.html</span> in the same folder<br>
+        3. Open a terminal there and run: <span class="code-inline">node server.js</span><br>
+        4. Open your deployed Render URL in your browser<br>
+        5. Paste your Groq key above, Save, then chat for free!
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+<div class="toast" id="toast"></div>
+
+<script>
+var accentColor = '#7c6dfa';
+var isTyping = false;
+var conversationHistory = [];
+
+function getApiKey() {
+  return localStorage.getItem('botforge_groq_key') || '';
+}
+
+function saveApiKey() {
+  var key = document.getElementById('apiKeyInput').value.trim();
+  if (!key.startsWith('gsk_')) {
+    showToast('Groq keys start with gsk_');
+    return;
+  }
+  localStorage.setItem('botforge_groq_key', key);
+  showToast('API key saved!');
+  updateStatus(true);
+}
+
+function clearApiKey() {
+  localStorage.removeItem('botforge_groq_key');
+  document.getElementById('apiKeyInput').value = '';
+  updateStatus(false);
+  showToast('API key cleared');
+}
+
+function updateStatus(connected) {
+  var pill = document.getElementById('statusPill');
+  var txt = document.getElementById('statusText');
+  if (connected) {
+    pill.className = 'status-pill connected';
+    txt.textContent = 'AI Connected';
+  } else {
+    pill.className = 'status-pill disconnected';
+    txt.textContent = 'Add API Key';
+  }
+}
+
+function setPage(id, tab) {
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  if (tab) tab.classList.add('active');
+  var pageEl = document.getElementById('page-' + id);
+  if (pageEl) pageEl.classList.add('active');
+}
+
+function applyIdentity() {
+  var name = document.getElementById('botNameInput').value || 'Bot';
+  var industry = document.getElementById('industryInput').value;
+  var welcome = document.getElementById('welcomeInput').value;
+  document.getElementById('botDisplayName').textContent = name;
+  document.getElementById('botDisplaySub').textContent = industry + ' Assistant - Powered by BotForge';
+  var wb = document.getElementById('welcomeBubble');
+  if (wb) wb.textContent = welcome;
+}
+
+function applyColor(hex, el) {
+  accentColor = hex;
+  document.querySelectorAll('.color-swatch').forEach(function(s) { s.classList.remove('selected'); });
+  el.classList.add('selected');
+  var botAv = document.getElementById('botAvatar');
+  if (botAv) botAv.style.background = 'linear-gradient(135deg,' + hex + ',#fa6d8a)';
+  document.querySelectorAll('.msg-avatar.bot-av').forEach(function(a) {
+    a.style.background = 'linear-gradient(135deg,' + hex + ',#fa6d8a)';
+  });
+  var sb = document.querySelector('.send-btn');
+  if (sb) sb.style.background = hex;
+  showToast('Color updated!');
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function sendQuick(btn) {
+  document.getElementById('userInput').value = btn.textContent;
+  var qp = document.getElementById('quickPrompts');
+  if (qp) qp.style.display = 'none';
+  sendMessage();
+}
+
+function sendMessage() {
+  var input = document.getElementById('userInput');
+  var text = input.value.trim();
+  if (!text || isTyping) return;
+
+  var apiKey = getApiKey();
+  if (!apiKey) {
+    showToast('Add your Groq API key in Settings first!');
+    document.querySelectorAll('.nav-tab').forEach(function(t) {
+      if (t.textContent.indexOf('Settings') !== -1) t.click();
+    });
+    return;
+  }
+
+  input.value = '';
+  input.style.height = 'auto';
+  var qp = document.getElementById('quickPrompts');
+  if (qp) qp.style.display = 'none';
+
+  addMessage(text, 'user');
+  conversationHistory.push({ role: 'user', content: text });
+
+  isTyping = true;
+  document.getElementById('sendBtn').disabled = true;
+  var typingEl = addTyping();
+
+  var systemPrompt = document.getElementById('systemInstructions')
+    ? document.getElementById('systemInstructions').value
+    : 'You are a helpful assistant.';
+  var modelEl = document.getElementById('modelSelect');
+  var model = modelEl ? modelEl.value : 'llama-3.1-8b-instant';
+
+  fetch('/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      apiKey: apiKey,
+      model: model,
+      system: systemPrompt,
+      messages: conversationHistory
+    })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    typingEl.remove();
+    isTyping = false;
+    document.getElementById('sendBtn').disabled = false;
+    if (data.error) {
+      addMessage('Error: ' + (data.error.message || 'Unknown error'), 'bot');
+    } else {
+      var reply = data.content[0].text;
+      addMessage(reply, 'bot');
+      conversationHistory.push({ role: 'assistant', content: reply });
+    }
+    scrollBottom();
+  })
+  .catch(function() {
+    typingEl.remove();
+    isTyping = false;
+    document.getElementById('sendBtn').disabled = false;
+    addMessage('Could not reach local server. Make sure "node server.js" is running.', 'bot');
+    scrollBottom();
+  });
+}
+
+function addMessage(text, role) {
+  var container = document.getElementById('messages');
+  var row = document.createElement('div');
+  row.className = 'msg-row ' + role;
+
+  var avatar = document.createElement('div');
+  avatar.className = 'msg-avatar' + (role === 'bot' ? ' bot-av' : '');
+  avatar.textContent = role === 'bot' ? '\u{1F916}' : '\u{1F464}';
+  if (role === 'bot') avatar.style.background = 'linear-gradient(135deg,' + accentColor + ',#fa6d8a)';
+  else avatar.style.background = 'var(--surface2)';
+
+  var col = document.createElement('div');
+  col.className = 'msg-col';
+
+  var bubble = document.createElement('div');
+  bubble.className = 'msg-bubble ' + role;
+  if (role === 'bot') {
+    bubble.innerHTML = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  } else {
+    bubble.textContent = text;
+  }
+  if (role === 'user') bubble.style.background = accentColor;
+
+  var time = document.createElement('div');
+  time.className = 'msg-time';
+  var now = new Date();
+  time.textContent = now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0');
+
+  col.appendChild(bubble);
+  col.appendChild(time);
+  if (role === 'bot') { row.appendChild(avatar); row.appendChild(col); }
+  else { row.appendChild(col); row.appendChild(avatar); }
+
+  container.appendChild(row);
+  scrollBottom();
+  return row;
+}
+
+function addTyping() {
+  var container = document.getElementById('messages');
+  var row = document.createElement('div');
+  row.className = 'typing-row';
+  var avatar = document.createElement('div');
+  avatar.className = 'msg-avatar bot-av';
+  avatar.textContent = '\u{1F916}';
+  avatar.style.background = 'linear-gradient(135deg,' + accentColor + ',#fa6d8a)';
+  var bubble = document.createElement('div');
+  bubble.className = 'typing-bubble';
+  bubble.innerHTML = '<div class="t-dot"></div><div class="t-dot"></div><div class="t-dot"></div>';
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  container.appendChild(row);
+  scrollBottom();
+  return row;
+}
+
+function scrollBottom() {
+  var c = document.getElementById('messages');
+  c.scrollTop = c.scrollHeight;
+}
+
+function resetChat() {
+  var container = document.getElementById('messages');
+  var welcomeEl = document.getElementById('welcomeInput');
+  var welcomeMsg = welcomeEl ? welcomeEl.value : 'Hello! How can I help you today?';
+  container.innerHTML = '';
+  var row = document.createElement('div');
+  row.className = 'msg-row';
+  var avatar = document.createElement('div');
+  avatar.className = 'msg-avatar bot-av';
+  avatar.textContent = '\u{1F916}';
+  avatar.style.background = 'linear-gradient(135deg,' + accentColor + ',#fa6d8a)';
+  var col = document.createElement('div');
+  col.className = 'msg-col';
+  var bubble = document.createElement('div');
+  bubble.className = 'msg-bubble bot';
+  bubble.id = 'welcomeBubble';
+  bubble.textContent = welcomeMsg;
+  var time = document.createElement('div');
+  time.className = 'msg-time';
+  time.textContent = 'Just now';
+  col.appendChild(bubble);
+  col.appendChild(time);
+  row.appendChild(avatar);
+  row.appendChild(col);
+  container.appendChild(row);
+  var qp = document.getElementById('quickPrompts');
+  if (qp) qp.style.display = 'flex';
+  conversationHistory = [];
+  showToast('Chat reset!');
+}
+
+function testConnection() {
+  var apiKey = getApiKey();
+  var result = document.getElementById('testResult');
+  if (!apiKey) {
+    result.textContent = 'No API key saved yet';
+    result.style.color = 'var(--warning)';
+    return;
+  }
+  result.textContent = 'Testing...';
+  result.style.color = 'var(--muted)';
+  fetch('/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      apiKey: apiKey,
+      model: 'llama-3.1-8b-instant',
+      system: 'You are a test assistant.',
+      messages: [{ role: 'user', content: 'Reply with the single word OK.' }]
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) {
+      result.textContent = 'Error: ' + data.error.message;
+      result.style.color = 'var(--accent2)';
+    } else {
+      result.textContent = 'Connected! AI replied: ' + data.content[0].text.trim();
+      result.style.color = 'var(--success)';
+      updateStatus(true);
+    }
+  })
+  .catch(function() {
+    result.textContent = 'Server not running. Run: node server.js';
+    result.style.color = 'var(--accent2)';
+  });
+}
+
+function simulateUpload() {
+  var names = ['Company FAQ.pdf', 'Services Guide.docx', 'Pricing 2025.pdf'];
+  var name = names[Math.floor(Math.random() * names.length)];
+  var div = document.createElement('div');
+  div.className = 'kb-item';
+  div.innerHTML = '\u{1F4C4} <span style="flex:1">' + name + '</span> <span class="kb-status" style="color:var(--warning);background:rgba(250,200,109,0.1)">Processing...</span>';
+  document.getElementById('kbItems').appendChild(div);
+  showToast('Uploading...');
+  setTimeout(function() {
+    div.querySelector('.kb-status').textContent = 'Trained';
+    div.querySelector('.kb-status').style.cssText = '';
+  }, 2500);
+}
+
+function simulateScrape() {
+  var urlEl = document.getElementById('scrapeUrl');
+  var url = (urlEl && urlEl.value) ? urlEl.value : 'yoursite.com';
+  showToast('Scraping ' + url + '...');
+  setTimeout(function() {
+    var div = document.createElement('div');
+    div.className = 'kb-item';
+    div.innerHTML = '\u{1F310} <span style="flex:1">' + url + ' (scraped)</span> <span class="kb-status">Trained</span>';
+    document.getElementById('kbItems').appendChild(div);
+    showToast('Website scraped!');
+  }, 2000);
+}
+
+function copyEmbed() {
+  var code = document.getElementById('embedSnippet').textContent;
+  navigator.clipboard.writeText(code).catch(function() {});
+  showToast('Embed code copied!');
+}
+
+function showToast(msg) {
+  var toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function() { toast.classList.remove('show'); }, 2800);
+}
+
+window.onload = function() {
+  var savedKey = getApiKey();
+  var keyInput = document.getElementById('apiKeyInput');
+  if (savedKey && keyInput) keyInput.value = savedKey;
+  updateStatus(!!savedKey);
+  setTimeout(function() {
+    var inp = document.getElementById('userInput');
+    if (inp) inp.focus();
+  }, 100);
+};
+</script>
+</body>
+</html>
