@@ -135,10 +135,10 @@
     <div class="nav-tab" onclick="setPage('knowledge',this)">&#x1F4DA; Knowledge Base</div>
     <div class="nav-tab" onclick="setPage('behavior',this)">&#x1F9E0; Behavior</div>
     <div class="nav-tab" onclick="setPage('embed',this)">&#x1F517; Embed</div>
-    <div class="nav-tab" onclick="setPage('settings',this)">&#x2699;&#xFE0F; Settings</div>
+
   </div>
   <div class="nav-right">
-    <div id="statusPill" class="status-pill disconnected" onclick="setPage('settings', document.querySelector('.nav-tab:last-child'))">
+    <div id="statusPill" class="status-pill connected">
       <div class="live-dot"></div>
       <span id="statusText">Add API Key</span>
     </div>
@@ -419,7 +419,7 @@ function updateStatus(connected) {
     txt.textContent = 'AI Connected';
   } else {
     pill.className = 'status-pill disconnected';
-    txt.textContent = 'Add API Key';
+    txt.textContent = 'AI Online';
   }
 }
 
@@ -479,14 +479,6 @@ function sendMessage() {
   var text = input.value.trim();
   if (!text || isTyping) return;
 
-  var apiKey = getApiKey();
-  if (!apiKey) {
-    showToast('Add your Groq API key in Settings first!');
-    document.querySelectorAll('.nav-tab').forEach(function(t) {
-      if (t.textContent.indexOf('Settings') !== -1) t.click();
-    });
-    return;
-  }
 
   input.value = '';
   input.style.height = 'auto';
@@ -510,7 +502,6 @@ function sendMessage() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      apiKey: apiKey,
       model: model,
       system: systemPrompt,
       messages: conversationHistory
@@ -645,7 +636,6 @@ function testConnection() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      apiKey: apiKey,
       model: 'llama-3.1-8b-instant',
       system: 'You are a test assistant.',
       messages: [{ role: 'user', content: 'Reply with the single word OK.' }]
